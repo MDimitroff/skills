@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fundamental analysis</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{--bg:#0d1117;--panel:#161b22;--panel2:#1c2330;--border:#2a3340;--txt:#e6edf3;--muted:#9aa7b4;--accent:#4c8dff;
+    --green:#2ea043;--green-bg:rgba(46,160,67,.13);--amber:#d29922;--amber-bg:rgba(210,153,34,.13);--red:#f85149;--red-bg:rgba(248,81,73,.13);}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.55;padding:32px 20px 80px}
+  .wrap{max-width:1080px;margin:0 auto}
+  header.hero{display:flex;flex-wrap:wrap;align-items:flex-end;gap:18px;justify-content:space-between;border-bottom:1px solid var(--border);padding-bottom:22px}
+  .ticker{font-size:13px;letter-spacing:.14em;color:var(--accent);font-weight:700}
+  h1{font-size:30px;font-weight:700;margin:2px 0 4px}
+  .sub{color:var(--muted);font-size:14px}
+  .price-box{text-align:right}
+  .price{font-size:32px;font-weight:700}.price small{font-size:14px;color:var(--muted);font-weight:400}
+  .asof{color:var(--muted);font-size:12px;margin-top:2px}
+  section{margin-top:38px}
+  h2{font-size:19px;font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:9px}
+  h2 .bar{width:4px;height:20px;background:var(--accent);border-radius:2px}
+  .lead{color:var(--muted);font-size:14px;margin-bottom:18px;max-width:880px}
+  .verdict{display:flex;flex-wrap:wrap;gap:20px;align-items:center;background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:22px 24px}
+  .score-ring{flex:0 0 auto;width:118px;height:118px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative}
+  .score-ring::before{content:"";position:absolute;inset:10px;border-radius:50%;background:var(--panel)}
+  .score-ring b{position:relative;font-size:30px;line-height:1}.score-ring span{position:relative;font-size:11px;color:var(--muted);margin-top:3px}
+  .verdict-txt{flex:1;min-width:260px}.verdict-txt h3{font-size:18px;margin-bottom:6px}.verdict-txt p{color:var(--muted);font-size:14px}
+  .pill{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:700;margin:4px 6px 0 0}
+  .pill.g{background:var(--green-bg);color:var(--green)}.pill.a{background:var(--amber-bg);color:var(--amber)}.pill.r{background:var(--red-bg);color:var(--red)}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:18px}
+  .kpi{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
+  .kpi .k{font-size:12px;color:var(--muted)}.kpi .v{font-size:22px;font-weight:700;margin-top:3px}.kpi .d{font-size:12px;margin-top:2px;color:var(--muted)}
+  table{width:100%;border-collapse:collapse;margin-top:8px;font-size:14px;background:var(--panel);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+  th,td{padding:12px 14px;text-align:left;border-bottom:1px solid var(--border);vertical-align:top}
+  th{background:var(--panel2);font-size:12px;letter-spacing:.04em;color:var(--muted);text-transform:uppercase;font-weight:600}
+  tr:last-child td{border-bottom:none}
+  td.num{font-variant-numeric:tabular-nums;font-weight:600}
+  .badge{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap}
+  .badge.g{background:var(--green-bg);color:var(--green)}.badge.a{background:var(--amber-bg);color:var(--amber)}.badge.r{background:var(--red-bg);color:var(--red)}
+  .dot{width:7px;height:7px;border-radius:50%;background:currentColor}
+  .charts{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px 18px 8px}
+  .card h4{font-size:14px;margin-bottom:2px}.card p.cm{font-size:12px;color:var(--muted);margin-bottom:10px}
+  .chart-box{position:relative;height:240px}
+  .note{background:var(--panel);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:10px;padding:14px 18px;margin-top:14px;font-size:14px;color:var(--muted)}
+  .note b{color:var(--txt)}
+  footer{margin-top:48px;border-top:1px solid var(--border);padding-top:18px;color:var(--muted);font-size:12px}
+  footer a{color:var(--accent);text-decoration:none}
+  @media(max-width:760px){.charts{grid-template-columns:1fr}h1{font-size:24px}.price{font-size:26px}}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+
+<script id="report-data" type="application/json">
+{
+  "ticker": "MSFT",
+  "exchange": "NASDAQ",
+  "company": "Microsoft Corporation",
+  "sector": "Технологичен сектор (Софтуер и Облак) - Фискална година: юли-юни",
+  "price": "$379.40",
+  "asof": "Цена към затваряне 18 юни 2026 - Пазарна кап. ~ $2.82 трлн.",
+  "scoreMet": 5,
+  "scoreTotal": 6,
+  "verdictTitle": "Качествен бизнес, но цената е леко висока",
+  "verdictText": "MSFT покрива убедително 5 от 6 критерия - нисък дълг, висока възвръщаемост, силно покритие на дълга и достатъчна ликвидност. Единственото предупреждение е оценката (P/E): 22.6 е над строгия праг 20, но остава под тавана от 30 за висококачествени компании.",
+  "kpis": [
+    {"k":"Приходи (TTM)","v":"$318.3 млрд.","d":"+17.9% год./год."},
+    {"k":"Нетна печалба (TTM)","v":"$125.2 млрд.","d":"+29.6% год./год."},
+    {"k":"Оперативен марж","v":"46.8%","d":"Брутен марж 68.3%"},
+    {"k":"Нетен марж","v":"39.3%","d":"Изключителен"},
+    {"k":"Свободен паричен поток","v":"$72.9 млрд.","d":"Марж 22.9%"},
+    {"k":"Нетен кеш","v":"+$21.3 млрд.","d":"Повече кеш от дълг"}
+  ],
+  "metrics": [
+    {"name":"Debt / Equity","bg":"Дълг / собствен капитал","threshold":"<= 50%","value":"~ 14%","status":"g","coverage":357,"comment":"Лихвоносен дълг $57 млрд. срещу капитал $414 млрд. Много нисък ливъридж."},
+    {"name":"P/E","bg":"Цена / печалба","threshold":"<= 20 (до 30 за качество)","value":"22.6","status":"a","coverage":133,"comment":"Над строгия праг 20, но под 30. Forward P/E е 20.5. Платена премия за качество."},
+    {"name":"ROE","bg":"Възвръщаемост на капитала","threshold":"> 15%","value":"31.1%","status":"g","coverage":207,"comment":"Над 2x прага. Изключителна ефективност (FY2025: 33.3%)."},
+    {"name":"ROIC","bg":"Възвр. на инвестирания капитал","threshold":"> 12%","value":"20.6%","status":"g","coverage":172,"comment":"Над 12% прага. Капиталът се влага с висока доходност."},
+    {"name":"Debt / EBITDA","bg":"Покритие на дълга","threshold":"< 1.5","value":"0.30","status":"g","coverage":500,"comment":"Отлично - печалбата покрива дълга 3x+. Сред най-добрите в сектора."},
+    {"name":"Current Ratio","bg":"Текуща ликвидност","threshold":"> 1.0","value":"1.28","status":"g","coverage":128,"comment":"Краткосрочните активи покриват краткосрочните задължения. Над прага 1.0."}
+  ],
+  "deRatioNote": "Изчислен е чрез лихвоносния дълг (заеми + финансови лизинги). Ако вместо това използваш всички задължения / собствен капитал, съотношението е ~ 0.68 - но това не е стандартната дефиниция на D/E и включва безлихвени позиции като отсрочени приходи.",
+  "labels": ["FY21","FY22","FY23","FY24","FY25","TTM"],
+  "revenue": [168.1,198.3,211.9,245.1,281.7,318.3],
+  "netIncome": [61.3,72.7,72.4,88.1,101.8,125.2],
+  "grossMargin": [68.9,68.4,68.9,69.8,68.8,68.3],
+  "opMargin": [41.6,42.1,41.8,44.6,45.6,46.8],
+  "netMargin": [36.5,36.7,34.2,36.0,36.2,39.3],
+  "roe": [47.1,47.2,38.8,37.1,33.3,31.1],
+  "roic": [31.4,30.6,25.5,24.0,21.8,20.6],
+  "de": [0.42,0.35,0.27,0.24,0.17,0.14],
+  "debtEbitda": [0.83,0.63,0.59,0.51,0.37,0.30],
+  "pe": [33.7,26.6,35.2,37.9,36.5,22.6],
+  "thresholds": {"roe":15,"roic":12,"de":0.50,"debtEbitda":1.5,"peLow":20,"peHigh":30},
+  "extra": [
+    {"name":"ROA (възвр. на активите)","value":"17.8%","note":"Висока ефективност на активите."},
+    {"name":"ROCE (възвр. на ангажирания капитал)","value":"27.3%","note":"Силна доходност на оперативния капитал."},
+    {"name":"Бърза ликвидност (Quick ratio)","value":"1.01","note":"Достатъчна ликвидност без запаси."},
+    {"name":"EV / EBITDA","value":"14.5","note":"Оценка спрямо паричната печалба - умерено висока."},
+    {"name":"P / FCF","value":"38.7","note":"Скъпо спрямо свободния поток - натиск от капекс за AI."},
+    {"name":"PEG (P/E към растеж)","value":"1.27","note":"Цената е горе-долу оправдана от растежа."},
+    {"name":"Дивидентна доходност","value":"0.96%","note":"Ниска, но коефициент на изплащане ~22% - място за ръст."},
+    {"name":"FCF марж","value":"22.9%","note":"Спадна от ~30% заради рекордни инвестиции в дейта центрове."}
+  ],
+  "watchNote": "Капиталовите разходи за AI инфраструктура са огромни - нетните имоти и съоръжения (PP&E) скочиха от $155 млрд. (2024) на $308 млрд. (TTM). Това свива FCF маржа и вдига P/FCF. Ако ROIC от тези инвестиции трайно спадне, това би бил първият сигнал, че капексът не се изплаща. Засега ROIC от 20%+ остава здрав.",
+  "bottomLine": "По твоята методология MSFT е висококачествен бизнес с крепостен баланс: дългът е нисък (D/E ~ 14%, Дълг/EBITDA 0.30), ликвидността е достатъчна (Current Ratio 1.28 > 1), а възвръщаемостта е изключителна (ROE 31%, ROIC 21%) - далеч над праговете. Единственото ограничение е оценката: P/E 22.6 е над строгия праг от 20, макар да остава под тавана от 30 за качествени акции. Бизнесът минава теста, цената е на горната граница на приемливото.",
+  "source": "StockAnalysis.com (данни от Fiscal.ai, базирани на SEC 10-K / 10-Q)",
+  "sourceUrl": "https://stockanalysis.com/stocks/msft/financials/",
+  "genDate": "19 юни 2026"
+}
+</script>
+
+<script>
+/* Данните се четат от <script id="report-data">. За нов тикер сменяш САМО този JSON блок. */
+var D = JSON.parse(document.getElementById('report-data').textContent);
+var COL = {grid:'#2a3340',txt:'#9aa7b4',blue:'#4c8dff',green:'#2ea043',amber:'#d29922',red:'#f85149',purple:'#a371f7',teal:'#39c5cf'};
+var SLAB = {g:'Покрива',a:'Внимание',r:'Червен флаг'};
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+var pct = D.scoreMet / D.scoreTotal * 100;
+var ringBg = 'conic-gradient(var(--green) 0 ' + pct + '%, var(--amber) ' + pct + '% 100%)';
+var kpiHtml = D.kpis.map(function(k){return '<div class="kpi"><div class="k">'+esc(k.k)+'</div><div class="v">'+esc(k.v)+'</div><div class="d">'+esc(k.d)+'</div></div>';}).join('');
+var pillHtml = D.metrics.map(function(m){var s=m.status==='g'?'✓':m.status==='a'?'⚠':'✕';return '<span class="pill '+m.status+'">'+esc(m.name)+' '+s+'</span>';}).join('');
+var scoreRows = D.metrics.map(function(m){return '<tr><td><b>'+esc(m.name)+'</b><br><span style="color:var(--muted);font-size:12px">'+esc(m.bg)+'</span></td><td>'+esc(m.threshold)+'</td><td class="num">'+esc(m.value)+'</td><td><span class="badge '+m.status+'"><span class="dot"></span>'+SLAB[m.status]+'</span></td><td>'+esc(m.comment)+'</td></tr>';}).join('');
+var extraRows = D.extra.map(function(e){return '<tr><td>'+esc(e.name)+'</td><td class="num">'+esc(e.value)+'</td><td>'+esc(e.note)+'</td></tr>';}).join('');
+document.getElementById('app').innerHTML =
+  '<header class="hero"><div><div class="ticker">'+esc(D.exchange)+' : '+esc(D.ticker)+'</div>'+
+  '<h1>'+esc(D.company)+'</h1><div class="sub">Фундаментален анализ - '+esc(D.sector)+'</div></div>'+
+  '<div class="price-box"><div class="price">'+esc(D.price)+' <small>USD</small></div><div class="asof">'+esc(D.asof)+'</div></div></header>'+
+  '<section style="margin-top:24px"><div class="verdict"><div class="score-ring" style="background:'+ringBg+'"><b>'+D.scoreMet+'/'+D.scoreTotal+'</b><span>критерия</span></div>'+
+  '<div class="verdict-txt"><h3>'+esc(D.verdictTitle)+'</h3><p>'+esc(D.verdictText)+'</p><div style="margin-top:8px">'+pillHtml+'</div></div></div></section>'+
+  '<section><h2><span class="bar"></span>Ключови показатели (TTM / текущи)</h2><div class="kpis">'+kpiHtml+'</div></section>'+
+  '<section><h2><span class="bar"></span>Карта на критериите</h2>'+
+  '<p class="lead">Всеки показател е сравнен директно със зададените прагове. Зелено = покрива; жълто = гранично/в рамките на изключение; червено = червен флаг.</p>'+
+  '<table><thead><tr><th>Показател</th><th>Праг</th><th>Стойност</th><th>Оценка</th><th>Коментар</th></tr></thead><tbody>'+scoreRows+'</tbody></table>'+
+  (D.deRatioNote?'<div class="note"><b>Бележка за Debt/Equity:</b> '+esc(D.deRatioNote)+'</div>':'')+'</section>'+
+  '<section><h2><span class="bar"></span>Тенденции</h2>'+
+  '<p class="lead">Историческо развитие на ключовите показатели. Пунктираните линии маркират праговете.</p>'+
+  '<div class="charts">'+
+  '<div class="card"><h4>Приходи и нетна печалба</h4><p class="cm">млрд. USD</p><div class="chart-box"><canvas id="chRev"></canvas></div></div>'+
+  '<div class="card"><h4>Маржове на печалба</h4><p class="cm">% - брутен / оперативен / нетен</p><div class="chart-box"><canvas id="chMargin"></canvas></div></div>'+
+  '<div class="card"><h4>ROE и ROIC спрямо праговете</h4><p class="cm">%</p><div class="chart-box"><canvas id="chReturns"></canvas></div></div>'+
+  '<div class="card"><h4>Ливъридж: D/E и Дълг/EBITDA</h4><p class="cm">спрямо праговете</p><div class="chart-box"><canvas id="chLev"></canvas></div></div>'+
+  '<div class="card"><h4>P/E във времето</h4><p class="cm">спрямо праговете 20 и 30</p><div class="chart-box"><canvas id="chPE"></canvas></div></div>'+
+  '<div class="card"><h4>Карта на критериите (% покритие)</h4><p class="cm">над 100% = покрива прага</p><div class="chart-box"><canvas id="chScore"></canvas></div></div>'+
+  '</div></section>'+
+  '<section><h2><span class="bar"></span>Допълнителни показатели</h2>'+
+  '<table><thead><tr><th>Показател</th><th>Стойност</th><th>Какво показва</th></tr></thead><tbody>'+extraRows+'</tbody></table>'+
+  (D.watchNote?'<div class="note"><b>Какво да следиш:</b> '+esc(D.watchNote)+'</div>':'')+'</section>'+
+  '<section><h2><span class="bar"></span>Заключение</h2><p class="lead" style="max-width:900px">'+esc(D.bottomLine)+'</p>'+
+  '<div class="note" style="border-left-color:var(--amber)"><b>Важно:</b> Това е аналитична информация по зададени критерии, не инвестиционен съвет. Решението и рискът са твои.</div></section>'+
+  '<footer><div>Източник на данните: <a href="'+esc(D.sourceUrl)+'" target="_blank">'+esc(D.source)+'</a> - Анализ генериран на '+esc(D.genDate)+'.</div>'+
+  '<div style="margin-top:6px">Генерирано от skill <b>stock-analysis</b>.</div></footer>';
+function drawCharts(){
+  Chart.defaults.color = COL.txt; Chart.defaults.font.family="-apple-system,Segoe UI,Roboto,sans-serif"; Chart.defaults.font.size=11;
+  var gridO={grid:{color:COL.grid},ticks:{color:COL.txt}};
+  function pctTick(v){return v+'%';}
+  function hline(vals){return {id:'h'+Math.random(),afterDraw:function(c){var ctx=c.ctx,a=c.chartArea,sc=c.scales;vals.forEach(function(v){var yp=sc.y.getPixelForValue(v[0]);ctx.save();ctx.strokeStyle=v[1];ctx.setLineDash([5,4]);ctx.beginPath();ctx.moveTo(a.left,yp);ctx.lineTo(a.right,yp);ctx.stroke();ctx.fillStyle=v[1];ctx.font='bold 10px sans-serif';ctx.fillText(v[2],a.left+4,yp-4);ctx.restore();});}};}
+  function g(id){return document.getElementById(id);}
+  new Chart(g('chRev'),{type:'bar',data:{labels:D.labels,datasets:[{label:'Приходи',data:D.revenue,backgroundColor:COL.blue,borderRadius:4},{label:'Нетна печалба',data:D.netIncome,backgroundColor:COL.green,borderRadius:4}]},options:{maintainAspectRatio:false,plugins:{legend:{position:'bottom'}},scales:{x:gridO,y:{grid:{color:COL.grid},ticks:{color:COL.txt},title:{display:true,text:'млрд. USD'}}}}});
+  new Chart(g('chMargin'),{type:'line',data:{labels:D.labels,datasets:[{label:'Брутен',data:D.grossMargin,borderColor:COL.teal,tension:.3},{label:'Оперативен',data:D.opMargin,borderColor:COL.blue,tension:.3},{label:'Нетен',data:D.netMargin,borderColor:COL.green,tension:.3}]},options:{maintainAspectRatio:false,plugins:{legend:{position:'bottom'}},scales:{x:gridO,y:{grid:{color:COL.grid},ticks:{color:COL.txt,callback:pctTick}}}}});
+  new Chart(g('chReturns'),{type:'line',data:{labels:D.labels,datasets:[{label:'ROE',data:D.roe,borderColor:COL.purple,tension:.3,pointRadius:3},{label:'ROIC',data:D.roic,borderColor:COL.blue,tension:.3,pointRadius:3}]},options:{maintainAspectRatio:false,plugins:{legend:{position:'bottom'}},scales:{x:gridO,y:{grid:{color:COL.grid},ticks:{color:COL.txt,callback:pctTick},suggestedMin:0}}},plugins:[hline([[D.thresholds.roe,COL.green,'ROE праг '+D.thresholds.roe+'%'],[D.thresholds.roic,COL.amber,'ROIC праг '+D.thresholds.roic+'%']])]});
+  new Chart(g('chLev'),{type:'line',data:{labels:D.labels,datasets:[{label:'Debt/Equity',data:D.de,borderColor:COL.amber,tension:.3,pointRadius:3},{label:'Дълг/EBITDA',data:D.debtEbitda,borderColor:COL.red,tension:.3,pointRadius:3}]},options:{maintainAspectRatio:false,plugins:{legend:{position:'bottom'}},scales:{x:gridO,y:{grid:{color:COL.grid},ticks:{color:COL.txt},suggestedMin:0,suggestedMax:Math.max.apply(null,[D.thresholds.debtEbitda].concat(D.debtEbitda))+0.2}}},plugins:[hline([[D.thresholds.de,COL.amber,'D/E праг '+D.thresholds.de],[D.thresholds.debtEbitda,COL.red,'Дълг/EBITDA праг '+D.thresholds.debtEbitda]])]});
+  new Chart(g('chPE'),{type:'line',data:{labels:D.labels,datasets:[{label:'P/E',data:D.pe,borderColor:COL.blue,backgroundColor:'rgba(76,141,255,.12)',fill:true,tension:.3,pointRadius:3}]},options:{maintainAspectRatio:false,plugins:{legend:{position:'bottom'}},scales:{x:gridO,y:{grid:{color:COL.grid},ticks:{color:COL.txt},suggestedMin:0,suggestedMax:Math.max.apply(null,[D.thresholds.peHigh].concat(D.pe))+6}}},plugins:[hline([[D.thresholds.peLow,COL.green,'праг '+D.thresholds.peLow],[D.thresholds.peHigh,COL.amber,'таван '+D.thresholds.peHigh]])]});
+  new Chart(g('chScore'),{type:'bar',data:{labels:D.metrics.map(function(m){return m.name;}),datasets:[{label:'% покритие',data:D.metrics.map(function(m){return m.coverage;}),backgroundColor:D.metrics.map(function(m){return m.status==='g'?COL.green:m.status==='a'?COL.amber:COL.red;}),borderRadius:5}]},options:{indexAxis:'y',maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.parsed.x+'% спрямо прага';}}}},scales:{x:{grid:{color:COL.grid},ticks:{color:COL.txt,callback:pctTick},suggestedMax:Math.max.apply(null,[120].concat(D.metrics.map(function(m){return m.coverage;})))+50},y:{grid:{color:COL.grid},ticks:{color:COL.txt}}}},plugins:[{id:'vl',afterDraw:function(c){var ctx=c.ctx,a=c.chartArea,sc=c.scales;var xp=sc.x.getPixelForValue(100);ctx.save();ctx.strokeStyle=COL.red;ctx.setLineDash([5,4]);ctx.beginPath();ctx.moveTo(xp,a.top);ctx.lineTo(xp,a.bottom);ctx.stroke();ctx.fillStyle=COL.red;ctx.font='bold 10px sans-serif';ctx.fillText('100% = праг',xp+4,a.top+10);ctx.restore();}}]});
+}
+if (typeof Chart !== 'undefined') { drawCharts(); }
+else {
+  var w=document.createElement('div'); w.className='note'; w.style.borderLeftColor='var(--amber)';
+  w.innerHTML='<b>Графиките не се заредиха.</b> Изглежда няма интернет връзка за библиотеката Chart.js (cdnjs.cloudflare.com). Таблиците и оценките по-горе са пълни и валидни.';
+  document.querySelector('.wrap').appendChild(w);
+}
+</script>
+</body>
+</html>
